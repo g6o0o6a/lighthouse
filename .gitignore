@@ -40,3 +40,6 @@ yarn-error.log
 /chrome.zip
 
 plots/out**
+
+*__pycache__
+*_pb2.py
