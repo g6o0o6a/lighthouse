@@ -6,6 +6,9 @@ from google.protobuf.json_format import Parse, MessageToJson
 
 cleaned_name = 'lhr_cleaned.json'
 
+path = os.path.realpath(__file__)
+path_dir = os.path.dirname(path)
+
 def clean():
     try:
         os.remove(cleaned_name)
@@ -13,7 +16,11 @@ def clean():
         pass
 
 def make_cleaned_sample_json(output_filename='lhr_cleaned.json'):
-    with open('../lighthouse-core/test/results/sample_v2.json', 'r') as f:
+
+    # get the parent directory 
+    dir_path = os.path.dirname(os.path.dirname(path))
+
+    with open(dir_path + '/lighthouse-core/test/results/sample_v2.json', 'r') as f:
         data = json.load(f)
 
     # convert scoreDisplayMode
@@ -46,7 +53,7 @@ def make_cleaned_sample_json(output_filename='lhr_cleaned.json'):
     data['EXPERIMENTALI18n'] = data['i18n']
     del data['i18n']
     
-    with open(output_filename, 'w') as f:
+    with open(path_dir + '/' + output_filename, 'w') as f:
         json.dump(data, f, indent=4)
 
 clean()
@@ -54,18 +61,22 @@ clean()
 make_cleaned_sample_json()
 
 # get json file
-with open('lhr_cleaned.json', 'r') as f:
+with open(path_dir + '/' + 'lhr_cleaned.json', 'r') as f:
     data = json.load(f)
 
 # convert string to proto object
 lhr = lhr_pb2.LighthouseResponse()
 Parse(json.dumps(data), lhr)
 
+# print(lhr.config_settings)
+
+# print(lhr.config_settings.gather_mode)
+
 # write proto object to console
-json_lhr = json.loads(MessageToJson(lhr))
+json_lhr = json.loads(MessageToJson(lhr, including_default_value_fields=True))
 
 # validate naive truth
 print(json_lhr == data) # is false b/c defaults!!!
 
-with open('lhr_round_trip.json', 'w') as f:
-    json.dump(json.loads(MessageToJson(lhr)), f, indent=4)
+with open(path_dir + '/' + 'lhr_round_trip.json', 'w') as f:
+    json.dump(json_lhr, f, indent=4)
