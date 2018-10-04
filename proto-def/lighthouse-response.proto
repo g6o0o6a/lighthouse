@@ -116,10 +116,10 @@ message ConfigSettings {
     // No emulation used, uses system directly
     none = 3;
   }
-
+  
   // The form factor used in the audit
   EmulatedFormFactor emulated_form_factor = 8;
-
+  
   // The locale that was active during the audit
   string locale = 9;
 
