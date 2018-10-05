@@ -20,3 +20,4 @@
 ## Hacking Hints
 - Clean out compiled proto and json with `yarn clean`
 - Round trips might jumble the order of your JSON keys and lists!
+- Is your `six` installation troubling your `pip install protobuf`? Mine did.  Try `pip install --ignore-installed six`.
