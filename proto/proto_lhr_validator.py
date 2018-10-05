@@ -1,7 +1,7 @@
 import os
 import sys
 import json
-import lighthouse_response_pb2 as lhr_pb2
+import lighthouse_result_pb2 as lhr_pb2
 from google.protobuf.json_format import Parse, MessageToJson
 
 cleaned_name = 'lhr_cleaned.json'
@@ -76,7 +76,7 @@ with open(path_dir + '/' + 'lhr_cleaned.json', 'r') as f:
     data = json.load(f)
 
 # convert string to proto object
-lhr = lhr_pb2.LighthouseResponse()
+lhr = lhr_pb2.LighthouseResult()
 Parse(json.dumps(data), lhr)
 
 # load proto into JSON w/defaults filled in

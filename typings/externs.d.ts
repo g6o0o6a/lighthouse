@@ -57,8 +57,8 @@ declare global {
     export import CrdpEvents = _CrdpMappings.Events;
     export import CrdpCommands = _CrdpMappings.Commands;
 
+    /** Simulation settings that control the amount of network & cpu throttling in the run. */
     interface ThrottlingSettings {
-      // simulation settings
       // The round trip time in milliseconds
       rttMs?: number;
       // The network throughput in kilobytes per second

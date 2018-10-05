@@ -64,7 +64,7 @@
     "ultradumbBenchmark": "./lighthouse-core/scripts/benchmark.js",
     "mixed-content": "./lighthouse-cli/index.js --chrome-flags='--headless' --preset=mixed-content",
     "minify-latest-run": "./lighthouse-core/scripts/lantern/minify-trace.js ./latest-run/defaultPass.trace.json ./latest-run/defaultPass.trace.min.json && ./lighthouse-core/scripts/lantern/minify-devtoolslog.js ./latest-run/defaultPass.devtoolslog.json ./latest-run/defaultPass.devtoolslog.min.json",
-    "compile-proto": "protoc --python_out=./ ./proto/lighthouse-response.proto && python ./proto/proto_lhr_validator.py"
+    "compile-proto": "protoc --python_out=./ ./proto/lighthouse-result.proto && python ./proto/proto_lhr_validator.py"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.60",
