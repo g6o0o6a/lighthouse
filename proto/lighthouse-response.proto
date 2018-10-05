@@ -164,8 +164,14 @@ message LighthouseResponse {
   // The settings that were used to run this audit
   ConfigSettings config_settings = 12;
 
-  // EXPERIMENTAL - i18n information
-  google.protobuf.Struct EXPERIMENTAL_i18n = 13;
+  // v1 - i18n information
+  oneof i18n {
+    // i18n info in version 1 message format
+    I18nV1 i18n_v1 = 13;
+
+    // i18n infor in a freeform object
+    google.protobuf.Struct i18n_freeform = 14;
+  }
 }
 
 // Message containing a category 
@@ -268,4 +274,90 @@ message AuditResult {
 
   // List of warnings associated with this audit
   repeated string warnings = 10;
+}
+
+// Message containing the i18n data for the LHR - Version 1
+message I18nV1 {
+
+  // Message holding the formatted strings used in the renderer
+  message RendererFormattedStrings {
+    // The disclaimer shown below a performance metric value
+    string variance_disclaimer = 1;
+
+    // The heading for the estimated page load savings opportunity of an audit
+    string opportunity_resource_column_label = 2;
+
+    // The heading for the estimated page load savings of opportunitu audits
+    string opportunity_savings_column_label = 3;
+
+    // The error string shown next to an erroring audit
+    string error_missing_audit_info = 4;
+
+    // The label shown next to an audit or metric that has had an error
+    string error_label = 5;
+
+    // The label shown above a bulleted list of warnings
+    string warning_header = 6;
+
+    // The tooltip text on an expandable chevron icon
+    string audit_group_expand_tooltip = 7;
+
+    // The heading that is shown above a list of audits that are passing
+    string passed_audits_group_title = 8;
+
+    // The heading shown above a list of audits that do not apply to a page
+    string not_applicable_audits_group_title = 9;
+
+    // The heading shown above a list of audits that were not computerd in the run
+    string manual_audits_group_title = 10;
+
+    // The label shown preceding important warnings that may have invalidated an entire report
+    string toplevel_warnings_message = 11;
+
+    // The label that explains the score gauges scale (0-49, 50-89, 90-100)
+    string scorescale_label = 12;
+
+    // The label for values shown in the summary of critical request chains
+    string crc_longest_duration_label = 13;
+
+    // The label for the initial request in a critical request chain
+    string crc_initial_navigation = 14;
+
+    // The disclaimer shown under performance explaning that the network can vary
+    string ls_performance_category_description = 15;
+
+    // The title of the lab data performance category
+    string lab_data_title = 16;
+  }
+
+  // The message holding all formatted strings
+  RendererFormattedStrings renderer_formatted_strings = 1;
+
+  // DEPRECATED WITH USE OF LISTVALUES
+  // Message that holds a path to an icu string
+  message IcuMessagePaths {
+
+    // The path to the message 
+    string path = 1;
+
+    // Message that holds the possible values that can be added to an icu message
+    message IcuMessageValues {
+      
+      // The specific vars that can be filled in to an icu message
+      oneof value_types {
+        int32 wasted_bytes = 1;
+        float time_in_ms = 2;
+        int32 item_count = 3;
+        int32 total_bytes = 4;
+        float wasted_ms = 5;
+      }
+
+    }
+
+    // The values that are needed to fill in the icu message.
+    IcuMessageValues values = 2;
+  }
+
+  // The map of message path objects. Keyed by a string in the form of "<js file path> | <js UIString varname>"
+  map<string, google.protobuf.ListValue> icu_message_paths = 2;
 }
