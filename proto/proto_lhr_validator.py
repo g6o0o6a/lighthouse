@@ -54,18 +54,15 @@ def make_cleaned_sample_json(output_filename='lhr_cleaned.json'):
     del data['i18n']
     
     # convert the icu message path objects to standard objects instead of strs or objects
-    for key, icuMessages in data['i18nV1']['icuMessagePaths'].items():
-        # if the messages are strs then we need to convert them to objects
-        if type(icuMessages[0]) is not dict:
-            new_messages = []
-            for message in icuMessages:
-                new_messages.append({
-                    'path': message,
-                })
-            data['i18nV1']['icuMessagePaths'][key] = new_messages
-        #     data['i18nV1']['icuMessagePaths'][key] = {'values':new_messages}
-        # else:
-        #     data['i18nV1']['icuMessagePaths'][key] = {'values':icuMessages}
+    # for key, icuMessages in data['i18nV1']['icuMessagePaths'].items():
+    #     # if the messages are strs then we need to convert them to objects
+    #     if type(icuMessages[0]) is not dict:
+    #         new_messages = []
+    #         for message in icuMessages:
+    #             new_messages.append({
+    #                 'path': message,
+    #             })
+    #         data['i18nV1']['icuMessagePaths'][key] = new_messages
         
     with open(path_dir + '/' + output_filename, 'w') as f:
         json.dump(data, f, indent=4)
