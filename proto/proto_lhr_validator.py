@@ -69,7 +69,7 @@ def make_cleaned_sample_json(output_filename='lhr_cleaned.json'):
 
 clean()
 
-make_cleaned_sample_json()
+make_cleaned_sample_json(cleaned_name)
 
 # get json file
 with open(path_dir + '/' + 'lhr_cleaned.json', 'r') as f:
@@ -79,16 +79,10 @@ with open(path_dir + '/' + 'lhr_cleaned.json', 'r') as f:
 lhr = lhr_pb2.LighthouseResponse()
 Parse(json.dumps(data), lhr)
 
-# print(lhr.config_settings)
-
-# print(lhr.config_settings.gather_mode)
-
-# write proto object to console
+# load proto into JSON w/defaults filled in
 json_lhr = json.loads(MessageToJson(lhr, including_default_value_fields=True))
 
-# validate naive truth
-print(json_lhr == data) # is false b/c defaults!!!
-
+# write round trip json file
 with open(path_dir + '/' + 'lhr_round_trip.json', 'w') as f:
     json.dump(json_lhr, f, indent=4)
 
