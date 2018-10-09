@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 
 // The overarching Lighthouse Response object (LHR)
 // https://github.com/GoogleChrome/lighthouse/blob/master/typings/lhr.d.ts
@@ -94,16 +95,16 @@ message LighthouseResult {
       int32 rtt_ms = 1;
 
       // The throughput in kilobytes per second
-      float throughput_kbps = 2;
+      google.protobuf.DoubleValue throughput_kbps = 2;
 
       // The request latency in milliseconds
-      float request_latency_ms = 3;
+      google.protobuf.DoubleValue request_latency_ms = 3;
 
       // The download throughput in kilobytes per second
-      float download_throughput_kbps = 4;
+      google.protobuf.DoubleValue download_throughput_kbps = 4;
 
       // The upload throughput in kilobytes per second
-      int32 upload_throughput_kbps = 5;
+      google.protobuf.DoubleValue upload_throughput_kbps = 5;
 
       // The amount of slowdown to apply to the cpu
       int32 cpu_slowdown_multiplier = 6;
@@ -164,14 +165,8 @@ message LighthouseResult {
   // The settings that were used to run this audit
   ConfigSettings config_settings = 12;
 
-  // v1 - i18n information
-  oneof i18n {
-    // i18n info in version 1 message format
-    I18nV1 i18n_v1 = 13;
-
-    // i18n infor in a freeform object
-    google.protobuf.Struct i18n_freeform = 14;
-  }
+  // i18n info in version 1 message format
+  I18n i18n = 13;
 }
 
 // Message containing a category 
@@ -197,7 +192,8 @@ message Category {
 
   // The overall score of the category, the weighted average of all its audits,
   // from 0-1.
-  float score = 4;
+  // This value is nullable, so is a `Value` type
+  google.protobuf.Value score = 4;
 
   // An description for manual audits within this category.
   string manual_description = 5;
@@ -208,7 +204,7 @@ message Category {
     string id = 1;
 
     // The weight of the audit's score in the overall category score.
-    float weight = 2;
+    google.protobuf.DoubleValue weight = 2;
 
     // The category group that the audit belongs to
     string group = 3;
@@ -233,7 +229,8 @@ message AuditResult {
 
   // The scored value determined by the audit, in the range `0-1`, or NaN if
   // `score_display_mode` indicates not scored.
-  float score = 4;
+  // This value is nullable, so is a `Value` type
+  google.protobuf.Value score = 4;
 
   // The ways an audit score should be interpreted:
   enum ScoreDisplayMode {
@@ -261,7 +258,7 @@ message AuditResult {
   ScoreDisplayMode score_display_mode = 5;
 
   // The human readable value that is displayed as the audit's result
-  repeated string display_value = 6;
+  string display_value = 6;
 
   // An explanation of audit-related issues encountered on the test page.
   string explanation = 7;
@@ -273,12 +270,12 @@ message AuditResult {
   google.protobuf.Struct details = 9;
 
   // List of warnings associated with this audit
-  repeated string warnings = 10;
+  // type of `Value` since this can be null
+  google.protobuf.Value warnings = 10;
 }
 
 // Message containing the i18n data for the LHR - Version 1
-message I18nV1 {
-
+message I18n {
   // Message holding the formatted strings used in the renderer
   message RendererFormattedStrings {
     // The disclaimer shown below a performance metric value
@@ -332,32 +329,4 @@ message I18nV1 {
 
   // The message holding all formatted strings
   RendererFormattedStrings renderer_formatted_strings = 1;
-
-  // DEPRECATED WITH USE OF LISTVALUES
-  // Message that holds a path to an icu string
-  message IcuMessagePaths {
-
-    // The path to the message 
-    string path = 1;
-
-    // Message that holds the possible values that can be added to an icu message
-    message IcuMessageValues {
-      
-      // The specific vars that can be filled in to an icu message
-      oneof value_types {
-        int32 wasted_bytes = 1;
-        float time_in_ms = 2;
-        int32 item_count = 3;
-        int32 total_bytes = 4;
-        float wasted_ms = 5;
-      }
-
-    }
-
-    // The values that are needed to fill in the icu message.
-    IcuMessageValues values = 2;
-  }
-
-  // The map of message path objects. Keyed by a string in the form of "<js file path> | <js UIString varname>"
-  map<string, google.protobuf.ListValue> icu_message_paths = 2;
 }
