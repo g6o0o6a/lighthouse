@@ -45,4 +45,4 @@ plots/out**
 *.pyc
 proto/*_pb2.*
 proto/*_pb.*
-proto/*.json
+proto/*_processed.json

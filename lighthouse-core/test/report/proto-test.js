@@ -8,55 +8,108 @@
 const path = require('path');
 const fs = require('fs');
 
-const sample = fs.readFileSync(path.resolve(__dirname, '../../../proto/sample_v2_processed.json'));
+const sample = fs.readFileSync(path.resolve(__dirname, '../results/sample_v2.json'));
 const roundTripJson = require('../../../proto/sample_v2_round_trip');
 
 /* eslint-env jest */
 
-describe('round-trip JSON comparison', () => {
-  it('has the same audit results sans details', () => {
-    const noDetails = JSON.parse(sample);
+const preprocess = function(sampleJson) {
+  // clean up audits
+  Object.keys(sampleJson.audits).forEach(audit => {
+    // clean up score display modes
+    if ('scoreDisplayMode' in sampleJson.audits[audit]) {
+      if (sampleJson.audits[audit].scoreDisplayMode === 'not-applicable') {
+        sampleJson.audits[audit].scoreDisplayMode = 'not_applicable';
+      }
+    }
+    // delete raw values
+    if ('rawValue' in sampleJson.audits[audit]) {
+      delete sampleJson.audits[audit].rawValue;
+    }
+    // clean up display values
+    if ('displayValue' in sampleJson.audits[audit]) {
+      if (Array.isArray(sampleJson.audits[audit]['displayValue'])) {
+        const values = [];
+        sampleJson.audits[audit]['displayValue'].forEach(item => {
+          values.push(item);
+        });
+        sampleJson.audits[audit]['displayValue'] = values.join(' | ');
+      }
+    }
+  });
 
-    Object.keys(noDetails.audits).forEach(audit => {
-      delete noDetails.audits[audit].details;
+  // delete i18n icuMsg paths
+  delete sampleJson.i18n.icuMessagePaths;
+
+  // remove empty strings
+  (function removeStrings(obj) {
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+      Object.keys(obj).forEach(key => {
+        if (typeof obj[key] === 'string' && obj[key] === '') {
+          delete obj[key];
+        } else if (typeof obj[key] === 'object' || Array.isArray(obj[key])) {
+          removeStrings(obj[key]);
+        }
+      });
+    } else if (Array.isArray(obj)) {
+      obj.forEach(item => {
+        if (typeof item === 'object' || Array.isArray(item)) {
+          removeStrings(item);
+        }
+      });
+    }
+  })(sampleJson);
+};
+
+
+describe('round trip JSON comparison subsets', () => {
+  let sampleJson;
+
+  beforeEach(() => {
+    sampleJson = JSON.parse(sample);
+    preprocess(sampleJson);
+  });
+
+  it('has the same audit results sans details', () => {
+    Object.keys(sampleJson.audits).forEach(audit => {
+      delete sampleJson.audits[audit].details;
     });
 
-    expect(roundTripJson.audits).toMatchObject(noDetails.audits);
+    expect(roundTripJson.audits).toMatchObject(sampleJson.audits);
   });
 
   it('has the same i18n rendererFormattedStrings', () => {
-    const noIcuMessagePaths = JSON.parse(sample);
-
-    delete noIcuMessagePaths.i18n.icuMessagePaths;
-
-    expect(roundTripJson.i18n).toMatchObject(noIcuMessagePaths.i18n);
+    expect(roundTripJson.i18n).toMatchObject(sampleJson.i18n);
   });
 
   it('has the same top level values', () => {
-    const topLevelOnly = JSON.parse(sample);
-
-    Object.keys(topLevelOnly).forEach(audit => {
-      if (typeof topLevelOnly[audit] === 'object' && !Array.isArray(topLevelOnly[audit])) {
-        delete topLevelOnly[audit];
+    Object.keys(sampleJson).forEach(audit => {
+      if (typeof sampleJson[audit] === 'object' && !Array.isArray(sampleJson[audit])) {
+        delete sampleJson[audit];
       }
     });
 
-    expect(roundTripJson).toMatchObject(topLevelOnly);
+    expect(roundTripJson).toMatchObject(sampleJson);
   });
 
   it('has the same config values', () => {
-    const configOnly = JSON.parse(sample);
+    expect(roundTripJson.configSettings).toMatchObject(sampleJson.configSettings);
+  });
+});
 
-    expect(roundTripJson.configSettings).toMatchObject(configOnly.configSettings);
+describe('round trip JSON comparison to everything', () => {
+  let sampleJson;
+
+  beforeEach(() => {
+    sampleJson = JSON.parse(sample);
+    preprocess(sampleJson);
   });
 
   it('has the same JSON overall sans details', () => {
-    const noDetails = JSON.parse(sample);
-
-    Object.keys(noDetails.audits).forEach(audit => {
-      delete noDetails.audits[audit].details;
+    Object.keys(sampleJson.audits).forEach(audit => {
+      delete sampleJson.audits[audit].details;
     });
 
-    expect(roundTripJson).toMatchObject(noDetails);
+    expect(roundTripJson).toMatchObject(sampleJson);
   });
 });
