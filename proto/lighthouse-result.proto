@@ -39,7 +39,8 @@ message LighthouseResult {
   string user_agent = 6;
 
   // Any top level warnings that this run encountered
-  repeated string run_warnings = 7;
+  // default is [] hence ListValue
+  google.protobuf.ListValue run_warnings = 7;
 
   // Message containing a runtime error config
   message RuntimeError {
@@ -114,13 +115,13 @@ message LighthouseResult {
     Throttling throttling = 4;
 
     // Flag indicating this audit was gather only or not
-    bool gatherMode = 5;
+    google.protobuf.BoolValue gather_mode = 5;
 
     // Flag disabling clearing the browser cache before runs
-    bool disable_storage_reset = 6;
+    google.protobuf.BoolValue disable_storage_reset = 6;
 
     // Flag indicating if device emulation was enabled or not
-    bool disable_device_emulation = 7;
+    google.protobuf.BoolValue disable_device_emulation = 7;
 
     // The possible form factors an audit can be run in
     enum EmulatedFormFactor {
@@ -144,22 +145,27 @@ message LighthouseResult {
     string locale = 9;
 
     // List of URL patterns that were blocked during this audit
-    repeated string blocked_url_patterns = 10;
+    // nullable list of strings
+    google.protobuf.Value blocked_url_patterns = 10;
 
     // Comma delimited list of trace categories to capture
-    string additional_trace_categories = 11;
+    // nullable string
+    google.protobuf.Value additional_trace_categories = 11;
 
     // Map of extra HTTP Headers to pass in with the request
-    map<string, string> extra_headers = 12;
+    google.protobuf.Value extra_headers = 12;
 
     // List of the audits that were preformed, empty if all were run
-    repeated string only_audits = 13;
+    // nullable list of strings
+    google.protobuf.Value only_audits = 13;
 
     // List of the categories that were run, empty if all were run
-    repeated string only_categories = 14;
+    // nullable list of strings
+    google.protobuf.Value only_categories = 14;
 
     // List of the audits that were skipped, empty if all were run
-    repeated string skip_audits = 15;
+    // nullable list of strings
+    google.protobuf.Value skip_audits = 15;
   }
 
   // The settings that were used to run this audit

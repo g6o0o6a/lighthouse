@@ -6,16 +6,7 @@
         1. Install the [C++ Protocol Buffer Runtime](https://github.com/protocolbuffers/protobuf/blob/master/src/README.md)
     1. Brew install
         1. `brew install protobuf`
-1. Run `yarn compile-proto` or run the commands seperately:
-    1. Compile proto python definitions
-        ```bash
-            cd ./proto
-            protoc --python_out=./ lighthouse-response.proto
-        ```
-    1. Run python round trip test
-        ```bash
-            python proto_lhr_validator.py
-        ```
+1. Run `yarn compile-proto` then `yarn build-proto`
 
 ## Proto Resources
 - [Protobuf Github Repo](https://github.com/protocolbuffers/protobuf) 

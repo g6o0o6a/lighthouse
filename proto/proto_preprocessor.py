@@ -38,6 +38,23 @@ def preproccess_json_lhr(file, output=None):
     # delete i18n icuPaths
     del data['i18n']['icuMessagePaths']
 
+    # remove empty strings
+    def remove_empty_strings(obj):
+        if type(obj) is dict:
+            for key, val in obj.items():
+                if type(val) is unicode:
+                    if val == "":
+                        del obj[key]
+                elif type(val) is dict or type(val) is list:
+                    remove_empty_strings(val)
+        elif type(obj) is list:
+            for item in obj:
+                if type(item) is dict or type(item) is list:
+                    remove_empty_strings(item)
+
+    remove_empty_strings(data)
+
+
     # set a default output filename
     if not output:
         output = path_dir + '/' + os.path.splitext(os.path.basename(file))[0] + '_processed.json'
