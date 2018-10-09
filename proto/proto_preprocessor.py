@@ -61,6 +61,6 @@ def preproccess_json_lhr(file, output=None):
 
     # write the file
     with open(output, 'w') as f:
-        json.dump(data, f, indent=4) 
+        json.dump(data, f, indent=4, sort_keys=True) 
 
     return output
