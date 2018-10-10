@@ -3,7 +3,6 @@
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
  */
-// @ts-nocheck
 'use strict';
 
 /**
@@ -24,10 +23,16 @@ const MINIMAL_LEGIBLE_FONT_SIZE_PX = 12;
 const MAX_NODES_VISITED = 500;
 const MAX_NODES_ANALYZED = 50;
 
+/** DevTools uses a numeric enum for nodeType */
+const TEXT_NODE_TYPE = 3;
+
+/** @typedef {LH.Artifacts.FontSize['analyzedFailingNodesData'][0]} FailingNodeData */
+/** @typedef {LH.Artifacts.FontSize.DomNodeMaybeWithParent} DomNodeMaybeWithParent*/
+
 const Driver = require('../../driver.js'); // eslint-disable-line no-unused-vars
 
 /**
- * @param {LH.Artifacts.FontSize.DomNodeWithParent} node
+ * @param {LH.Artifacts.FontSize.DomNodeMaybeWithParent=} node
  * @returns {boolean}
  */
 function nodeInBody(node) {
@@ -44,58 +49,131 @@ function nodeInBody(node) {
  * Get list of all nodes from the document body.
  *
  * @param {Driver} driver
- * @returns {Array<LH.Artifacts.FontSize.DomNodeWithParent>}
+ * @returns {Promise<Array<LH.Artifacts.FontSize.DomNodeWithParent>>}
  */
-function getAllNodesFromBody(driver) {
-  return driver.getNodesInDocument()
-    .then(nodes => {
-      const nodeMap = new Map();
-      nodes.forEach(node => nodeMap.set(node.nodeId, node));
-      nodes.forEach(node => node.parentNode = nodeMap.get(node.parentId));
-      return nodes.filter(nodeInBody);
-    });
+async function getAllNodesFromBody(driver) {
+  const nodes = /** @type {DomNodeMaybeWithParent[]} */ (await driver.getNodesInDocument());
+  /** @type {Map<number, LH.Artifacts.FontSize.DomNodeMaybeWithParent>} */
+  const nodeMap = new Map();
+  nodes.forEach(node => nodeMap.set(node.nodeId, node));
+  nodes.forEach(node => node.parentNode = nodeMap.get(node.parentId));
+  // @ts-ignore - once passing through the filter, it's guaranteed to have a parent
+  return nodes.filter(nodeInBody);
 }
 
 /**
- * Returns effective CSS rule for given CSS property
- *
- * @param {string} property CSS property name
- * @param {LH.Crdp.DOM.Node} node
- * @param {LH.Crdp.CSS.GetMatchedStylesForNodeResponse} matched CSS rules
- * @returns {WebInspector.CSSStyleDeclaration}
+ * @param {LH.Crdp.CSS.CSSStyle} [style]
+ * @return {boolean}
  */
-function getEffectiveRule(property, node, {
+function hasFontSizeDeclaration(style) {
+  return !!style && !!style.cssProperties.find(({name}) => name === FONT_SIZE_PROPERTY_NAME);
+}
+
+/**
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity
+ * @see https://www.smashingmagazine.com/2010/04/css-specificity-and-inheritance/
+ *
+ * @param {string} selector
+ * @return {number}
+ */
+function computeSelectorSpecificity(selector) {
+  const tokens = selector.split(' ');
+
+  let numIDs = 0;
+  let numClasses = 0;
+  let numTypes = 0;
+
+  for (const token of tokens) {
+    const ids = token.match(/\b#[a-z0-9]+/g) || []
+    const classes = token.match(/\b\.[a-z0-9]+/g) || []
+    const types = token.match(/^[a-z]+/) ? [1] : []
+    numIDs += ids.length;
+    numClasses += classes.length;
+    numTypes += types.length;
+  }
+
+  return Math.min(9, numIDs) * 100 + Math.min(9, numClasses) * 10 + Math.min(9, numTypes);
+}
+
+/**
+ *
+ * @param {Array<LH.Crdp.CSS.RuleMatch>} [matchedCSSRules]
+ * @returns {FailingNodeData['cssRule']|undefined}
+ */
+function findDirectCSSRule(matchedCSSRules = []) {
+  let maxSpecificity = -Infinity;
+  /** @type {LH.Crdp.CSS.CSSRule|undefined} */
+  let maxSpecificityRule;
+
+  for (const {rule, matchingSelectors} of matchedCSSRules) {
+    if (hasFontSizeDeclaration(rule.style)) {
+      const specificities = matchingSelectors
+        .map(idx => computeSelectorSpecificity(rule.selectorList.selectors[idx].text));
+      const specificity = Math.max(...specificities);
+      // Use greater OR EQUAL so that the last rule wins in the event of a tie
+      if (specificity >= maxSpecificity) {
+        maxSpecificity = specificity;
+        maxSpecificityRule = rule;
+      }
+    }
+  }
+
+  if (maxSpecificityRule) {
+    return {
+      type: 'Regular',
+      ...maxSpecificityRule.style,
+      parentRule: {
+        origin: maxSpecificityRule.origin,
+        selectors: maxSpecificityRule.selectorList.selectors,
+      },
+    }
+  }
+}
+
+/**
+ *
+ * @param {Array<LH.Crdp.CSS.InheritedStyleEntry>} [inheritedEntries]
+ * @returns {FailingNodeData['cssRule']|undefined}
+ */
+function findInheritedCSSRule(inheritedEntries = []) {
+  // The inherited array contains the array of matched rules for all parents in ascending tree order.
+  // i.e. for an element whose path is `html > body > #main > #nav > p`
+  // `inherited` will be an array of styles like `[#nav, #main, body, html]`
+  // The closest parent with font-size will win
+  for (const {inlineStyle, matchedCSSRules} of inheritedEntries) {
+    if (hasFontSizeDeclaration(inlineStyle)) return {type: 'Inline', ...inlineStyle}
+
+    const directRule = findDirectCSSRule(matchedCSSRules);
+    if (directRule) return directRule;
+  }
+}
+
+/**
+ * Returns effective CSS rule for given CSS property.
+ * This is roughly a stripped down version of the CSSMatchedStyle class in DevTools.
+ *
+ * @see https://cs.chromium.org/chromium/src/third_party/blink/renderer/devtools/front_end/sdk/CSSMatchedStyles.js?q=CSSMatchedStyles+f:devtools+-f:out&sq=package:chromium&dr=C&l=59-134
+ * @param {LH.Crdp.CSS.GetMatchedStylesForNodeResponse} matched CSS rules
+ * @returns {FailingNodeData['cssRule']|undefined}
+ */
+function getEffectiveFontRule({
   inlineStyle,
-  attributesStyle,
   matchedCSSRules,
   inherited,
 }) {
-  const cssModel = {
-    styleSheetHeaderForId: id => ({id}),
-  };
+  // Inline styles have highest priority
+  if (hasFontSizeDeclaration(inlineStyle)) return {type: 'Inline', ...inlineStyle};
 
-  const nodeType = node.nodeType;
-  node.nodeType = () => nodeType;
-  const matchedStyles = new CSSMatchedStyles(
-    cssModel,
-    node,
-    inlineStyle,
-    attributesStyle,
-    matchedCSSRules,
-    null,
-    inherited,
-    null
-  );
+  // Rules directly referencing the node come next
+  const directRule = findDirectCSSRule(matchedCSSRules);
+  if (directRule) return directRule;
 
-  const nodeStyles = matchedStyles.nodeStyles();
-  const matchingRule = nodeStyles
-    .find(style =>
-      // the applicable property will be the only one that isn't in the "overloaded" state.
-      style.allProperties().some(item => item.name === property &&
-        matchedStyles.propertyState(item) !== CSSMatchedStyles.PropertyState.Overloaded)
-    );
+  // Finally, find an inherited property if there is one
+  const inheritedRule = findInheritedCSSRule(inherited);
+  if (inheritedRule) return inheritedRule;
 
-  return matchingRule;
+  return undefined;
 }
 
 /**
@@ -109,17 +187,17 @@ function getNodeTextLength(node) {
 /**
  * @param {Driver} driver
  * @param {LH.Crdp.DOM.Node} node text node
- * @returns {WebInspector.CSSStyleDeclaration}
+ * @returns {Promise<FailingNodeData['cssRule']|undefined>}
  */
 function getFontSizeSourceRule(driver, node) {
   return driver.sendCommand('CSS.getMatchedStylesForNode', {nodeId: node.nodeId})
-    .then(matchedRules => getEffectiveRule(FONT_SIZE_PROPERTY_NAME, node, matchedRules));
+    .then(matchedRules => getEffectiveFontRule(matchedRules));
 }
 
 /**
  * @param {Driver} driver
  * @param {LH.Artifacts.FontSize.DomNodeWithParent} node text node
- * @returns {Promise<?{fontSize: number, textLength: number, node: LH.Artifacts.FontSize.DomNodeWithParent}>}
+ * @returns {Promise<?FailingNodeData>}
  */
 function getFontSizeInformation(driver, node) {
   return driver.sendCommand('CSS.getComputedStyleForNode', {nodeId: node.parentId})
@@ -128,9 +206,10 @@ function getFontSizeInformation(driver, node) {
       const fontSizeProperty = computedStyle.find(({name}) => name === FONT_SIZE_PROPERTY_NAME);
 
       return {
+        // @ts-ignore - font size property guaranteed to be returned in getComputedStyle
         fontSize: parseInt(fontSizeProperty.value, 10),
         textLength: getNodeTextLength(node),
-        node: node.parentNode,
+        node: /** @type {LH.Artifacts.FontSize.DomNodeWithParent} */ (node.parentNode),
       };
     })
     .catch(err => {
@@ -144,7 +223,7 @@ function getFontSizeInformation(driver, node) {
  * @returns {boolean}
  */
 function isNonEmptyTextNode(node) {
-  return node.nodeType === global.Node.TEXT_NODE &&
+  return node.nodeType === TEXT_NODE_TYPE &&
     !TEXT_NODE_BLOCK_LIST.has(node.parentNode.nodeName) &&
     getNodeTextLength(node) > 0;
 }
@@ -182,11 +261,17 @@ class FontSize extends Gatherer {
       .then(textNodes =>
         Promise.all(textNodes.map(node => getFontSizeInformation(passContext.driver, node))))
       .then(fontSizeInfo => {
-        const visitedNodes = fontSizeInfo.filter(Boolean);
-        visitedTextLength = visitedNodes.reduce((sum, {textLength}) => sum += textLength, 0);
-        const failingNodes = visitedNodes
-          .filter(({fontSize}) => fontSize < MINIMAL_LEGIBLE_FONT_SIZE_PX);
-        failingTextLength = failingNodes.reduce((sum, {textLength}) => sum += textLength, 0);
+        /** @type {Array<FailingNodeData>} */
+        const failingNodes = [];
+        for (const visitedNode of fontSizeInfo) {
+          if (!visitedNode) continue;
+          visitedTextLength += visitedNode.textLength;
+
+          if (visitedNode.fontSize < MINIMAL_LEGIBLE_FONT_SIZE_PX) {
+            failingNodes.push(visitedNode);
+            failingTextLength += visitedNode.textLength;
+          }
+        }
 
         return Promise.all(failingNodes
           .sort((a, b) => b.textLength - a.textLength)
@@ -194,20 +279,18 @@ class FontSize extends Gatherer {
           .map(info =>
             getFontSizeSourceRule(passContext.driver, info.node)
               .then(sourceRule => {
-                if (sourceRule) {
-                  info.cssRule = {
-                    type: sourceRule.type,
-                    range: sourceRule.range,
-                    styleSheetId: sourceRule.styleSheetId,
-                  };
+                if (!sourceRule) return info;
 
-                  if (sourceRule.parentRule) {
-                    info.cssRule.parentRule = {
-                      origin: sourceRule.parentRule.origin,
-                      selectors: sourceRule.parentRule.selectors,
-                    };
+                info.cssRule = {
+                  type: sourceRule.type,
+                  range: sourceRule.range,
+                  styleSheetId: sourceRule.styleSheetId,
+                  parentRule: sourceRule.parentRule && {
+                    origin: sourceRule.parentRule.origin,
+                    selectors: sourceRule.parentRule.selectors,
                   }
-                }
+                };
+
                 return info;
               })
           )
@@ -221,6 +304,7 @@ class FontSize extends Gatherer {
 
         analyzedFailingNodesData
           .filter(data => data.cssRule && data.cssRule.styleSheetId)
+          // @ts-ignore - guaranteed to exist from the filter immediately above
           .forEach(data => data.cssRule.stylesheet = stylesheets.get(data.cssRule.styleSheetId));
 
         return Promise.all([
@@ -238,6 +322,8 @@ class FontSize extends Gatherer {
 }
 
 module.exports = FontSize;
+module.exports.computeSelectorSpecificity = computeSelectorSpecificity;
+module.exports.getEffectiveFontRule = getEffectiveFontRule;
 
 /**
  * Simplified, for serializability sake, WebInspector.CSSStyleDeclaration
@@ -248,3 +334,4 @@ module.exports = FontSize;
  * @property {string} styleSheetId
  * @property {WebInspector.CSSStyleSheetHeader} stylesheet
  */
+
