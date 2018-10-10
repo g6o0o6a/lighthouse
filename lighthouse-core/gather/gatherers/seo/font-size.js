@@ -14,7 +14,6 @@
  * This gatherer collects stylesheet metadata by itself, instead of relying on the styles gatherer which is slow (because it parses the stylesheet content).
  */
 
-const CSSMatchedStyles = require('../../../lib/web-inspector').CSSMatchedStyles;
 const Gatherer = require('../gatherer');
 const FONT_SIZE_PROPERTY_NAME = 'font-size';
 const TEXT_NODE_BLOCK_LIST = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT']);
@@ -349,5 +348,6 @@ class FontSize extends Gatherer {
 }
 
 module.exports = FontSize;
+module.exports.TEXT_NODE_TYPE = TEXT_NODE_TYPE;
 module.exports.computeSelectorSpecificity = computeSelectorSpecificity;
 module.exports.getEffectiveFontRule = getEffectiveFontRule;

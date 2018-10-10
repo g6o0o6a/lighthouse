@@ -8,7 +8,6 @@
 /* eslint-env jest */
 
 const FontSizeGather = require('../../../../gather/gatherers/seo/font-size');
-const assert = require('assert');
 let fontSizeGather;
 
 const smallText = ' body small text ';
@@ -23,34 +22,34 @@ const nodes = [
   {
     nodeId: 4,
     nodeValue: 'head text',
-    nodeType: global.Node.TEXT_NODE,
+    nodeType: FontSizeGather.TEXT_NODE_TYPE,
     parentId: 2,
   },
   {
     nodeId: 5,
     nodeValue: smallText,
-    nodeType: global.Node.TEXT_NODE,
+    nodeType: FontSizeGather.TEXT_NODE_TYPE,
     parentId: 3,
   },
   {nodeId: 6, nodeName: 'H1', parentId: 3},
   {
     nodeId: 7,
     nodeValue: bigText,
-    nodeType: global.Node.TEXT_NODE,
+    nodeType: FontSizeGather.TEXT_NODE_TYPE,
     parentId: 6,
   },
   {nodeId: 8, nodeName: 'SCRIPT', parentId: 3},
   {
     nodeId: 9,
     nodeValue: 'script text',
-    nodeType: global.Node.TEXT_NODE,
+    nodeType: FontSizeGather.TEXT_NODE_TYPE,
     parentId: 8,
   },
   failingNode,
   {
     nodeId: 11,
     nodeValue: failingText,
-    nodeType: global.Node.TEXT_NODE,
+    nodeType: FontSizeGather.TEXT_NODE_TYPE,
     parentId: 10,
   },
 ];
@@ -61,7 +60,7 @@ describe('Font size gatherer', () => {
     fontSizeGather = new FontSizeGather();
   });
 
-  it("returns information about font size's used on page", async () => {
+  it('returns information about font sizes used on page', async () => {
     const driver = {
       on() {},
       off() {},
