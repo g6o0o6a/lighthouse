@@ -33,4 +33,4 @@ round_trip_lhr = json.loads(MessageToJson(lhr, including_default_value_fields=Fa
 
 # write the output json
 with open(path_dir + '/' + 'sample_v2_round_trip.json', 'w') as f:
-    json.dump(round_trip_lhr, f, indent=4)
+    json.dump(round_trip_lhr, f, indent=4, sort_keys=True)
