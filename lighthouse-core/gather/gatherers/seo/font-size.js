@@ -15,6 +15,7 @@
  */
 
 const Gatherer = require('../gatherer');
+const Sentry = require('../../../lib/sentry.js');
 const FONT_SIZE_PROPERTY_NAME = 'font-size';
 const TEXT_NODE_BLOCK_LIST = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT']);
 const MINIMAL_LEGIBLE_FONT_SIZE_PX = 12;
@@ -208,24 +209,24 @@ async function fetchSourceRule(driver, node) {
  * @param {LH.Artifacts.FontSize.DomNodeWithParent} node text node
  * @returns {Promise<?FailingNodeData>}
  */
-function fetchComputedFontSize(driver, node) {
-  return driver
-    .sendCommand('CSS.getComputedStyleForNode', {nodeId: node.parentId})
-    .then(result => {
-      const {computedStyle} = result;
-      const fontSizeProperty = computedStyle.find(({name}) => name === FONT_SIZE_PROPERTY_NAME);
-
-      return {
-        // @ts-ignore - font size property guaranteed to be returned in getComputedStyle
-        fontSize: parseInt(fontSizeProperty.value, 10),
-        textLength: getNodeTextLength(node),
-        node: /** @type {LH.Artifacts.FontSize.DomNodeWithParent} */ (node.parentNode),
-      };
-    })
-    .catch(err => {
-      require('../../../lib/sentry.js').captureException(err);
-      return null;
+async function fetchComputedFontSize(driver, node) {
+  try {
+    const {computedStyle} = await driver.sendCommand('CSS.getComputedStyleForNode', {
+      nodeId: node.parentId,
     });
+
+    const fontSizeProperty = computedStyle.find(({name}) => name === FONT_SIZE_PROPERTY_NAME);
+
+    return {
+      // @ts-ignore - font size property guaranteed to be returned in getComputedStyle
+      fontSize: parseInt(fontSizeProperty.value, 10),
+      textLength: getNodeTextLength(node),
+      node: /** @type {LH.Artifacts.FontSize.DomNodeWithParent} */ (node.parentNode),
+    };
+  } catch (err) {
+    Sentry.captureException(err);
+    return null;
+  }
 }
 
 /**
@@ -312,8 +313,10 @@ class FontSize extends Gatherer {
     const onStylesheetAdd = sheet => stylesheets.set(sheet.header.styleSheetId, sheet.header);
     passContext.driver.on('CSS.styleSheetAdded', onStylesheetAdd);
 
-    await passContext.driver.sendCommand('DOM.enable');
-    await passContext.driver.sendCommand('CSS.enable');
+    await Promise.all([
+      passContext.driver.sendCommand('DOM.enable'),
+      passContext.driver.sendCommand('CSS.enable'),
+    ]);
 
     const {
       totalTextLength,
@@ -334,8 +337,10 @@ class FontSize extends Gatherer {
       // @ts-ignore - guaranteed to exist from the filter immediately above
       .forEach(data => (data.cssRule.stylesheet = stylesheets.get(data.cssRule.styleSheetId)));
 
-    await passContext.driver.sendCommand('DOM.disable');
-    await passContext.driver.sendCommand('CSS.disable');
+    await Promise.all([
+      passContext.driver.sendCommand('DOM.disable'),
+      passContext.driver.sendCommand('CSS.disable'),
+    ]);
 
     return {
       analyzedFailingNodesData,
