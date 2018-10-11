@@ -16,47 +16,56 @@
 function processForProto(result) {
   const reportJson = JSON.parse(result);
 
-  // clean up audits
-  Object.keys(reportJson.audits).forEach(audit => {
-    // clean up score display modes
-    if ('scoreDisplayMode' in reportJson.audits[audit]) {
-      if (reportJson.audits[audit].scoreDisplayMode === 'not-applicable') {
-        reportJson.audits[audit].scoreDisplayMode = 'not_applicable';
+  // clean up that requires audits to exist
+  if ('audits' in reportJson) {
+    // clean up audits
+    Object.keys(reportJson.audits).forEach(audit => {
+      // clean up score display modes
+      if ('scoreDisplayMode' in reportJson.audits[audit]) {
+        if (reportJson.audits[audit].scoreDisplayMode === 'not-applicable') {
+          reportJson.audits[audit].scoreDisplayMode = 'not_applicable';
+        }
       }
-    }
-    // delete raw values
-    if ('rawValue' in reportJson.audits[audit]) {
-      delete reportJson.audits[audit].rawValue;
-    }
-    // clean up display values
-    if ('displayValue' in reportJson.audits[audit]) {
-      if (Array.isArray(reportJson.audits[audit]['displayValue'])) {
-        const values = [];
-        reportJson.audits[audit]['displayValue'].forEach(item => {
-          values.push(item);
-        });
-        reportJson.audits[audit]['displayValue'] = values.join(' | ');
+      // delete raw values
+      if ('rawValue' in reportJson.audits[audit]) {
+        delete reportJson.audits[audit].rawValue;
       }
-    }
-  });
-
-  // delete null children in crc
-  const chains = reportJson.audits['critical-request-chains']['details']['chains'];
-
-  (function removeEmptyChildren(cs) {
-    Object.keys(cs).forEach(chain => {
-      if (cs[chain].hasOwnProperty('children')) {
-        if (Object.keys(cs[chain].children).length === 0) {
-          delete cs[chain].children;
-        } else {
-          removeEmptyChildren(cs[chain].children);
+      // clean up display values
+      if ('displayValue' in reportJson.audits[audit]) {
+        if (Array.isArray(reportJson.audits[audit]['displayValue'])) {
+          const values = [];
+          reportJson.audits[audit]['displayValue'].forEach(item => {
+            values.push(item);
+          });
+          reportJson.audits[audit]['displayValue'] = values.join(' | ');
         }
       }
     });
-  })(chains);
+
+    // delete null children in crc
+    if ('critical-request-chains' in reportJson.audits &&
+        'details' in reportJson.audits['critical-request-chains'] &&
+        'chains' in reportJson.audits['critical-request-chains']['details']) {
+      const chains = reportJson.audits['critical-request-chains']['details']['chains'];
+
+      (function removeEmptyChildren(cs) {
+        Object.keys(cs).forEach(chain => {
+          if (cs[chain].hasOwnProperty('children')) {
+            if (Object.keys(cs[chain].children).length === 0) {
+              delete cs[chain].children;
+            } else {
+              removeEmptyChildren(cs[chain].children);
+            }
+          }
+        });
+      })(chains);
+    }
+  }
 
   // delete i18n icuMsg paths
-  delete reportJson.i18n.icuMessagePaths;
+  if ('i18n' in reportJson && 'icuMessagePaths' in reportJson.i18n) {
+    delete reportJson.i18n.icuMessagePaths;
+  }
 
   // remove empty strings
   (function removeStrings(obj) {
