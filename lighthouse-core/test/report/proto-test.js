@@ -10,79 +10,15 @@ const fs = require('fs');
 
 const sample = fs.readFileSync(path.resolve(__dirname, '../results/sample_v2.json'));
 const roundTripJson = require('../../../proto/sample_v2_round_trip');
+const preprocessor = require('../../lib/proto-preprocessor.js');
 
 /* eslint-env jest */
-
-const preprocess = function(sampleJson) {
-  // clean up audits
-  Object.keys(sampleJson.audits).forEach(audit => {
-    // clean up score display modes
-    if ('scoreDisplayMode' in sampleJson.audits[audit]) {
-      if (sampleJson.audits[audit].scoreDisplayMode === 'not-applicable') {
-        sampleJson.audits[audit].scoreDisplayMode = 'not_applicable';
-      }
-    }
-    // delete raw values
-    if ('rawValue' in sampleJson.audits[audit]) {
-      delete sampleJson.audits[audit].rawValue;
-    }
-    // clean up display values
-    if ('displayValue' in sampleJson.audits[audit]) {
-      if (Array.isArray(sampleJson.audits[audit]['displayValue'])) {
-        const values = [];
-        sampleJson.audits[audit]['displayValue'].forEach(item => {
-          values.push(item);
-        });
-        sampleJson.audits[audit]['displayValue'] = values.join(' | ');
-      }
-    }
-  });
-
-  // delete null children in crc
-  const chains = sampleJson.audits['critical-request-chains']['details']['chains'];
-
-  (function removeEmptyChildren(cs) {
-    Object.keys(cs).forEach(chain => {
-      if (cs[chain].hasOwnProperty('children')) {
-        if (Object.keys(cs[chain].children).length === 0) {
-          delete cs[chain].children;
-        } else {
-          removeEmptyChildren(cs[chain].children);
-        }
-      }
-    });
-  })(chains);
-
-  // delete i18n icuMsg paths
-  delete sampleJson.i18n.icuMessagePaths;
-
-  // remove empty strings
-  (function removeStrings(obj) {
-    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-      Object.keys(obj).forEach(key => {
-        if (typeof obj[key] === 'string' && obj[key] === '') {
-          delete obj[key];
-        } else if (typeof obj[key] === 'object' || Array.isArray(obj[key])) {
-          removeStrings(obj[key]);
-        }
-      });
-    } else if (Array.isArray(obj)) {
-      obj.forEach(item => {
-        if (typeof item === 'object' || Array.isArray(item)) {
-          removeStrings(item);
-        }
-      });
-    }
-  })(sampleJson);
-};
-
 
 describe('round trip JSON comparison subsets', () => {
   let sampleJson;
 
   beforeEach(() => {
-    sampleJson = JSON.parse(sample);
-    preprocess(sampleJson);
+    sampleJson = JSON.parse(preprocessor.processForProto(sample));
   });
 
   it('has the same audit results sans details', () => {
@@ -127,8 +63,7 @@ describe('round trip JSON comparison to everything', () => {
   let sampleJson;
 
   beforeEach(() => {
-    sampleJson = JSON.parse(sample);
-    preprocess(sampleJson);
+    sampleJson = JSON.parse(preprocessor.processForProto(sample));
   });
 
   it('has the same JSON overall', () => {

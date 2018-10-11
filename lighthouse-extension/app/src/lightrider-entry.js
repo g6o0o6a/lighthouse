@@ -50,7 +50,9 @@ async function runLighthouseInLR(connection, url, flags, {lrDevice, categoryIDs,
 
     // pre process the LHR for proto
     if (flags.output === 'json') {
-      return preprocessor.processForProto(results);
+      if (typeof results.report === 'string') {
+        return preprocessor.processForProto(results.report);
+      }
     }
 
     return results.report;

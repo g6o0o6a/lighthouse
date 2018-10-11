@@ -11,10 +11,10 @@
  */
 
 /**
-  * @param {LH.RunnerResult} result
+  * @param {string} result
   */
 function processForProto(result) {
-  const reportJson = JSON.parse(result.report);
+  const reportJson = JSON.parse(result);
 
   // clean up audits
   Object.keys(reportJson.audits).forEach(audit => {
