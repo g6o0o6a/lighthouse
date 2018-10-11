@@ -14,7 +14,7 @@
   * @param {LH.RunnerResult} result
   */
 function processForProto(result) {
-  const reportJson = result.report;
+  const reportJson = JSON.parse(result.report);
 
   // clean up audits
   Object.keys(reportJson.audits).forEach(audit => {
@@ -76,6 +76,8 @@ function processForProto(result) {
       });
     }
   })(reportJson);
+
+  return JSON.stringify(reportJson);
 }
 
 module.exports = {
