@@ -160,7 +160,7 @@
   },
   "bundlesize": [
     {
-      "path": "./lighthouse-extension/dist/scripts/lighthouse-background.js",
+      "path": "./lighthouse-extension/dist/scripts/lighthouse-ext-bundle.js",
       "threshold": "520 Kb"
     },
     {
