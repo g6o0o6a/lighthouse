@@ -211,7 +211,6 @@
             "details": {
                 "chains": {
                     "75994.33": {
-                        "children": null, 
                         "request": {
                             "endTime": 185608.857719, 
                             "responseReceivedTime": 185608.85586200003, 
@@ -223,7 +222,6 @@
                     "F3B687683512E0F003DD41EB23E2091A": {
                         "children": {
                             "75994.10": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185605.113307, 
                                     "responseReceivedTime": 185605.104776, 
@@ -233,7 +231,6 @@
                                 }
                             }, 
                             "75994.11": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185604.557407, 
                                     "responseReceivedTime": 185604.556719, 
@@ -243,7 +240,6 @@
                                 }
                             }, 
                             "75994.21": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185607.28227, 
                                     "responseReceivedTime": 185606.742005, 
@@ -253,7 +249,6 @@
                                 }
                             }, 
                             "75994.22": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185608.117509, 
                                     "responseReceivedTime": 185607.822806, 
@@ -263,7 +258,6 @@
                                 }
                             }, 
                             "75994.28": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185607.285454, 
                                     "responseReceivedTime": 185606.82147599998, 
@@ -273,7 +267,6 @@
                                 }
                             }, 
                             "75994.3": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185604.52588, 
                                     "responseReceivedTime": 185604.52470399998, 
@@ -283,7 +276,6 @@
                                 }
                             }, 
                             "75994.4": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185604.534512, 
                                     "responseReceivedTime": 185604.532778, 
@@ -293,7 +285,6 @@
                                 }
                             }, 
                             "75994.5": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185606.170588, 
                                     "responseReceivedTime": 185606.169761, 
@@ -303,7 +294,6 @@
                                 }
                             }, 
                             "75994.6": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185604.541262, 
                                     "responseReceivedTime": 185604.54052399998, 
@@ -313,7 +303,6 @@
                                 }
                             }, 
                             "75994.7": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185604.549739, 
                                     "responseReceivedTime": 185604.54903999998, 
@@ -323,7 +312,6 @@
                                 }
                             }, 
                             "75994.8": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185605.097653, 
                                     "responseReceivedTime": 185605.096858, 
@@ -333,7 +321,6 @@
                                 }
                             }, 
                             "75994.9": {
-                                "children": null, 
                                 "request": {
                                     "endTime": 185607.537382, 
                                     "responseReceivedTime": 185607.53660999998, 
