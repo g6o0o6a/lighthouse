@@ -16,9 +16,6 @@ describe('processing for proto', () => {
           'scoreDisplayMode': 'not-applicable',
           'rawValue': 14.3,
           'displayValue': ['hello %d', 123],
-          'details': {
-            'chains': {},
-          },
         },
       },
     };
@@ -27,49 +24,6 @@ describe('processing for proto', () => {
         'critical-request-chains': {
           'scoreDisplayMode': 'not_applicable',
           'displayValue': 'hello %d | 123',
-        },
-      },
-    };
-    const output = processForProto(JSON.stringify(input));
-
-    expect(JSON.parse(output)).toMatchObject(expectation);
-  });
-
-  it('removes crc request chains that are null', () => {
-    const input = {
-      'audits': {
-        'critical-request-chains': {
-          'details': {
-            'chains': {
-              '1': {
-                'children': {},
-              },
-              '2': {
-                'children': {
-                  '3': {
-                    'children': {},
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    };
-    const expectation = {
-      'audits': {
-        'critical-request-chains': {
-          'details': {
-            'chains': {
-              '1': {
-              },
-              '2': {
-                'children': {
-                  '3': {},
-                },
-              },
-            },
-          },
         },
       },
     };

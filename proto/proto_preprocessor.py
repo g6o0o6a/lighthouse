@@ -35,18 +35,6 @@ def preproccess_json_lhr(file, output=None):
                     new_list.append(item)
                 audit["displayValue"] = (' | ').join(new_list)
 
-    # remove empty children from crc details
-    if 'critical-request-chains' in audits:
-        chains = audits['critical-request-chains']['details']['chains']
-        def remove_empty_children(cs):
-            for _, chain in cs.items():
-                if 'children' in chain:
-                    if chain['children'] == {}:
-                        del chain['children']
-                    else:
-                        remove_empty_children(chain['children'])
-        remove_empty_children(chains)
-
     # delete i18n icuPaths
     del data['i18n']['icuMessagePaths']
 

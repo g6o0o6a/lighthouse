@@ -41,25 +41,6 @@ function processForProto(result) {
         }
       }
     });
-
-    // delete null children in crc
-    if ('critical-request-chains' in reportJson.audits &&
-        'details' in reportJson.audits['critical-request-chains'] &&
-        'chains' in reportJson.audits['critical-request-chains']['details']) {
-      const chains = reportJson.audits['critical-request-chains']['details']['chains'];
-
-      (function removeEmptyChildren(cs) {
-        Object.keys(cs).forEach(chain => {
-          if (cs[chain].hasOwnProperty('children')) {
-            if (Object.keys(cs[chain].children).length === 0) {
-              delete cs[chain].children;
-            } else {
-              removeEmptyChildren(cs[chain].children);
-            }
-          }
-        });
-      })(chains);
-    }
   }
 
   // delete i18n icuMsg paths
