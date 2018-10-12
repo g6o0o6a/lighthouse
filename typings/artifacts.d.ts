@@ -236,7 +236,6 @@ declare global {
         }
 
         export interface DomNodeMaybeWithParent extends Crdp.DOM.Node {
-          parentId: number;
           parentNode?: DomNodeMaybeWithParent;
         }
       }

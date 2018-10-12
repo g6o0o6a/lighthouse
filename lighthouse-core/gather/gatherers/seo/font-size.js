@@ -26,14 +26,13 @@ const MAX_NODES_ANALYZED = 50;
 /** DevTools uses a numeric enum for nodeType */
 const TEXT_NODE_TYPE = 3;
 
-/** @typedef {LH.Artifacts.FontSize['analyzedFailingNodesData'][0]} FailingNodeData */
+/** @typedef {import('../../driver.js')} Driver */
+/** @typedef {LH.Artifacts.FontSize['analyzedFailingNodesData'][0]} NodeFontData */
 /** @typedef {LH.Artifacts.FontSize.DomNodeMaybeWithParent} DomNodeMaybeWithParent*/
-
-const Driver = require('../../driver.js'); // eslint-disable-line no-unused-vars
 
 /**
  * @param {LH.Artifacts.FontSize.DomNodeMaybeWithParent=} node
- * @returns {boolean}
+ * @returns {node is LH.Artifacts.FontSize.DomNodeWithParent}
  */
 function nodeInBody(node) {
   if (!node) {
@@ -53,11 +52,10 @@ function nodeInBody(node) {
  */
 async function getAllNodesFromBody(driver) {
   const nodes = /** @type {DomNodeMaybeWithParent[]} */ (await driver.getNodesInDocument());
-  /** @type {Map<number, LH.Artifacts.FontSize.DomNodeMaybeWithParent>} */
+  /** @type {Map<number|undefined, LH.Artifacts.FontSize.DomNodeMaybeWithParent>} */
   const nodeMap = new Map();
   nodes.forEach(node => nodeMap.set(node.nodeId, node));
   nodes.forEach(node => (node.parentNode = nodeMap.get(node.parentId)));
-  // @ts-ignore - once passing through the filter, it's guaranteed to have a parent
   return nodes.filter(nodeInBody);
 }
 
@@ -70,6 +68,7 @@ function hasFontSizeDeclaration(style) {
 }
 
 /**
+ * Computes the CSS specificity of a given selector, i.e. #id > .class > div
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity
  * @see https://www.smashingmagazine.com/2010/04/css-specificity-and-inheritance/
@@ -97,11 +96,12 @@ function computeSelectorSpecificity(selector) {
 }
 
 /**
+ * Finds the most specific directly matched CSS rule from the list.
  *
  * @param {Array<LH.Crdp.CSS.RuleMatch>} [matchedCSSRules]
- * @returns {FailingNodeData['cssRule']|undefined}
+ * @returns {NodeFontData['cssRule']|undefined}
  */
-function findDirectCSSRule(matchedCSSRules = []) {
+function findMostSpecificMatchedCSSRule(matchedCSSRules = []) {
   let maxSpecificity = -Infinity;
   /** @type {LH.Crdp.CSS.CSSRule|undefined} */
   let maxSpecificityRule;
@@ -133,9 +133,10 @@ function findDirectCSSRule(matchedCSSRules = []) {
 }
 
 /**
+ * Finds the most specific directly matched CSS rule from the list.
  *
  * @param {Array<LH.Crdp.CSS.InheritedStyleEntry>} [inheritedEntries]
- * @returns {FailingNodeData['cssRule']|undefined}
+ * @returns {NodeFontData['cssRule']|undefined}
  */
 function findInheritedCSSRule(inheritedEntries = []) {
   // The inherited array contains the array of matched rules for all parents in ascending tree order.
@@ -145,7 +146,7 @@ function findInheritedCSSRule(inheritedEntries = []) {
   for (const {inlineStyle, matchedCSSRules} of inheritedEntries) {
     if (hasFontSizeDeclaration(inlineStyle)) return {type: 'Inline', ...inlineStyle};
 
-    const directRule = findDirectCSSRule(matchedCSSRules);
+    const directRule = findMostSpecificMatchedCSSRule(matchedCSSRules);
     if (directRule) return directRule;
   }
 }
@@ -156,15 +157,15 @@ function findInheritedCSSRule(inheritedEntries = []) {
  *
  * @see https://cs.chromium.org/chromium/src/third_party/blink/renderer/devtools/front_end/sdk/CSSMatchedStyles.js?q=CSSMatchedStyles+f:devtools+-f:out&sq=package:chromium&dr=C&l=59-134
  * @param {LH.Crdp.CSS.GetMatchedStylesForNodeResponse} matched CSS rules
- * @returns {FailingNodeData['cssRule']|undefined}
+ * @returns {NodeFontData['cssRule']|undefined}
  */
 function getEffectiveFontRule({inlineStyle, matchedCSSRules, inherited}) {
   // Inline styles have highest priority
   if (hasFontSizeDeclaration(inlineStyle)) return {type: 'Inline', ...inlineStyle};
 
   // Rules directly referencing the node come next
-  const directRule = findDirectCSSRule(matchedCSSRules);
-  if (directRule) return directRule;
+  const matchedRule = findMostSpecificMatchedCSSRule(matchedCSSRules);
+  if (matchedRule) return matchedRule;
 
   // Finally, find an inherited property if there is one
   const inheritedRule = findInheritedCSSRule(inherited);
@@ -184,7 +185,7 @@ function getNodeTextLength(node) {
 /**
  * @param {Driver} driver
  * @param {LH.Crdp.DOM.Node} node text node
- * @returns {Promise<FailingNodeData['cssRule']|undefined>}
+ * @returns {Promise<NodeFontData['cssRule']|undefined>}
  */
 async function fetchSourceRule(driver, node) {
   const matchedRules = await driver.sendCommand('CSS.getMatchedStylesForNode', {
@@ -207,7 +208,7 @@ async function fetchSourceRule(driver, node) {
 /**
  * @param {Driver} driver
  * @param {LH.Artifacts.FontSize.DomNodeWithParent} node text node
- * @returns {Promise<?FailingNodeData>}
+ * @returns {Promise<?NodeFontData>}
  */
 async function fetchComputedFontSize(driver, node) {
   try {
@@ -224,7 +225,7 @@ async function fetchComputedFontSize(driver, node) {
       node: /** @type {LH.Artifacts.FontSize.DomNodeWithParent} */ (node.parentNode),
     };
   } catch (err) {
-    Sentry.captureException(err);
+    Sentry.captureException(err, {tags: {gatherer: 'FontSize'}});
     return null;
   }
 }
@@ -262,7 +263,7 @@ class FontSize extends Gatherer {
     const nodePromises = nodesToVisit.map(node => fetchComputedFontSize(driver, node));
     const visitedNodes = await Promise.all(nodePromises);
 
-    /** @type {Array<FailingNodeData>} */
+    /** @type {Array<NodeFontData>} */
     const failingNodes = [];
     for (const visitedNode of visitedNodes) {
       if (!visitedNode) continue;
@@ -284,7 +285,7 @@ class FontSize extends Gatherer {
   /**
    *
    * @param {LH.Gatherer.PassContext['driver']} driver
-   * @param {Array<FailingNodeData>} nodesToAnalyze
+   * @param {Array<NodeFontData>} nodesToAnalyze
    */
   static async analyzeFailingNodes(driver, nodesToAnalyze) {
     const analysisPromises = nodesToAnalyze.map(async failingNode => {
