@@ -10,7 +10,7 @@ path_dir = os.path.dirname(path)
 
 def clean():
     try:
-        os.remove(path_dir + '/sample_v2_preprocessed.json')
+        os.remove(path_dir + '/../sample_v2_preprocessed.json')
     except OSError:
         pass
 
@@ -18,7 +18,7 @@ def clean():
 clean()
 
 # preprocess the sample json
-sample = preproccess_json_lhr(path_dir + '/../lighthouse-core/test/results/sample_v2.json')
+sample = preproccess_json_lhr(path_dir + '/../../lighthouse-core/test/results/sample_v2.json')
 
 # open json, and convert to proto
 with open(sample, 'r') as f:
@@ -32,5 +32,5 @@ Parse(json.dumps(data), lhr)
 round_trip_lhr = json.loads(MessageToJson(lhr, including_default_value_fields=False))
 
 # write the output json
-with open(path_dir + '/' + 'sample_v2_round_trip.json', 'w') as f:
+with open(path_dir + '/../' + 'sample_v2_round_trip.json', 'w') as f:
     json.dump(round_trip_lhr, f, indent=4, sort_keys=True)

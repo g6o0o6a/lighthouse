@@ -43,6 +43,6 @@ plots/out**
 
 *__pycache__
 *.pyc
-proto/*_pb2.*
-proto/*_pb.*
-proto/*_processed.json
+proto/scripts/*_pb2.*
+proto/scripts/*_pb.*
+proto/scripts/*_processed.json
