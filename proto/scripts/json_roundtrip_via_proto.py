@@ -23,7 +23,7 @@ clean()
 
 # preprocess the sample json
 cmd = ["node", "./../../lighthouse-core/lib/proto-preprocessor.js", "--in=./../../lighthouse-core/test/results/sample_v2.json", "--out=./sample_v2_processed.json"]
-process = subprocess.call(cmd, stdout=subprocess.PIPE)
+process = subprocess.call(cmd)
 
 # open json
 with open(path_sample_preprocessed, 'r') as f:
