@@ -91,15 +91,16 @@ if (require.main === module) {
   let output;
 
   if (args.length) {
-    input = args.find(flag => flag.startsWith('--in'));
-    output = args.find(flag => flag.startsWith('--out'));
+    // find can return undefined, so default it to '' with OR
+    input = (args.find(flag => flag.startsWith('--in')) || '').replace('--in=', '');
+    output = (args.find(flag => flag.startsWith('--out')) || '').replace('--out=', '');
   }
 
   if (input && output) {
     // process the file
-    const report = processForProto(fs.readFileSync(input.replace('--in=', ''), 'utf-8'));
+    const report = processForProto(fs.readFileSync(input, 'utf-8'));
     // write to output from argv
-    fs.writeFileSync(output.replace('--out=', ''), report, 'utf-8');
+    fs.writeFileSync(output, report, 'utf-8');
   }
 } else {
   module.exports = {
