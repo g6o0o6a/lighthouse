@@ -78,13 +78,15 @@ function init(opts) {
 
       const tags = opts.tags || {};
       if (tags.audit) {
-        if (sentryExceptionCache.has(tags.audit)) return;
-        sentryExceptionCache.set(tags.audit, true);
+        const key = `audit-${tags.audit}-${err.message}`;
+        if (sentryExceptionCache.has(key)) return;
+        sentryExceptionCache.set(key, true);
       }
 
       if (tags.gatherer) {
-        if (sentryExceptionCache.has(tags.gatherer)) return;
-        sentryExceptionCache.set(tags.gatherer, true);
+        const key = `gatherer-${tags.gatherer}-${err.message}`;
+        if (sentryExceptionCache.has(key)) return;
+        sentryExceptionCache.set(key, true);
       }
 
       // Sample known errors that occur at a high frequency.
