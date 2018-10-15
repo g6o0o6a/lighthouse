@@ -12,6 +12,17 @@
 - [Protobuf Github Repo](https://github.com/protocolbuffers/protobuf) 
 - [Protobuf Docs](https://developers.google.com/protocol-buffers/docs/overview)
 
+## LHR Round Trip Flow
+```
+LHR round trip flow:
+    (Compiling the Proto)
+    lighthouse_result.proto -> protoc --python_out ... -> lighthouse_result.pb2
+                                                                  ⭏
+                                                               (used by)
+    (Making a Round Trip JSON)                                     ⭏
+    lhr.json --> proto_preprocessor.js -> lhr_processed.json -> json_roundtrip_via_proto.py -> lhr.round_trip.json
+```
+
 ## Hacking Hints
 - Clean out compiled proto and json with `yarn clean`
 - Round trips might jumble the order of your JSON keys and lists!

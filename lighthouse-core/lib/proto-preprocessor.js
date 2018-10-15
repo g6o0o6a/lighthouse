@@ -3,53 +3,64 @@
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
  */
-// @ts-nocheck
+
 'use strict';
 
+const fs = require('fs');
+
 /**
- * Helper functions to transform an LHR into a proto-ready LHR
+ * @fileoverview Helper functions to transform an LHR into a proto-ready LHR.
+ *
+ * FIXME: This file is 100% technical debt.  Our eventual goal is for the
+ * roundtrip JSON to match the Golden LHR 1:1.
  */
 
 /**
   * @param {string} result
   */
 function processForProto(result) {
+  /** @type {LH.Result} */
   const reportJson = JSON.parse(result);
 
-  // clean up that requires audits to exist
+  // Clean up actions that require 'audits' to exist
   if ('audits' in reportJson) {
-    // clean up audits
-    Object.keys(reportJson.audits).forEach(audit => {
-      // clean up score display modes
-      if ('scoreDisplayMode' in reportJson.audits[audit]) {
-        if (reportJson.audits[audit].scoreDisplayMode === 'not-applicable') {
-          reportJson.audits[audit].scoreDisplayMode = 'not_applicable';
+    Object.keys(reportJson.audits).forEach(auditName => {
+      const audit = reportJson.audits[auditName];
+
+      // Rewrite the 'not-applicable' scoreDisplayMode to 'not_applicable'. #6201
+      if ('scoreDisplayMode' in audit) {
+        if (audit.scoreDisplayMode === 'not-applicable') {
+          // @ts-ignore Breaking the LH.Result type
+          audit.scoreDisplayMode = 'not_applicable';
         }
       }
-      // delete raw values
-      if ('rawValue' in reportJson.audits[audit]) {
-        delete reportJson.audits[audit].rawValue;
+      // Drop raw values. #6199
+      if ('rawValue' in audit) {
+        delete audit.rawValue;
       }
-      // clean up display values
-      if ('displayValue' in reportJson.audits[audit]) {
-        if (Array.isArray(reportJson.audits[audit]['displayValue'])) {
-          const values = [];
-          reportJson.audits[audit]['displayValue'].forEach(item => {
-            values.push(item);
-          });
-          reportJson.audits[audit]['displayValue'] = values.join(' | ');
-        }
+      // Normalize displayValue to always be a string, not an array. #6200
+
+      if (Array.isArray(audit.displayValue)) {
+        /** @type {Array<any>}*/
+        const values = [];
+        audit.displayValue.forEach(item => {
+          values.push(item);
+        });
+        audit.displayValue = values.join(' | ');
       }
     });
   }
 
-  // delete i18n icuMsg paths
+  // Drop the i18n icuMessagePaths. Painful in proto, and low priority to expose currently.
   if ('i18n' in reportJson && 'icuMessagePaths' in reportJson.i18n) {
     delete reportJson.i18n.icuMessagePaths;
   }
 
-  // remove empty strings
-  (function removeStrings(obj) {
+  // Remove any found empty strings, as they are dropped after round-tripping anyway
+  /**
+   * @param {any} obj
+   */
+  function removeStrings(obj) {
     if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
       Object.keys(obj).forEach(key => {
         if (typeof obj[key] === 'string' && obj[key] === '') {
@@ -65,11 +76,33 @@ function processForProto(result) {
         }
       });
     }
-  })(reportJson);
+  }
+
+  removeStrings(reportJson);
 
   return JSON.stringify(reportJson);
 }
 
-module.exports = {
-  processForProto,
-};
+// @ts-ignore claims always false, but this checks if cli or module
+if (require.main === module) {
+  // read in the argv for the input & output
+  const args = process.argv.slice(2);
+  let input;
+  let output;
+
+  if (args.length) {
+    input = args.find(flag => flag.startsWith('--in'));
+    output = args.find(flag => flag.startsWith('--out'));
+  }
+
+  if (input && output) {
+    // process the file
+    const report = processForProto(fs.readFileSync(input.replace('--in=', ''), 'utf-8'));
+    // write to output from argv
+    fs.writeFileSync(output.replace('--out=', ''), report, 'utf-8');
+  }
+} else {
+  module.exports = {
+    processForProto,
+  };
+}
