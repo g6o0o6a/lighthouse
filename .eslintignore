@@ -6,6 +6,7 @@
 **/third_party/**
 
 **/dist/**
+**/dist_master/**
 lighthouse-extension/app/scripts
 
 **/closure/*/*
